@@ -113,13 +113,13 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.AlergyApp'
+    namespace 'com.evak.kostkollen'
     defaultConfig {
-        applicationId 'com.anonymous.AlergyApp'
+        applicationId 'com.evak.kostkollen'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 12
+        versionName "3.7.6"
     }
 
     splits {

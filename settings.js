@@ -1,15 +1,11 @@
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase';
 import { signOut } from "firebase/auth";
 import { useNavigation } from "@react-navigation/native";
-import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import FoodPreferences from "./FoodPreferences";
 
@@ -17,20 +13,22 @@ const Homestack = createNativeStackNavigator()
 
 const SettingsScreen = ({ route }) => {
   const [user, setUser] = useState(null);
-  const [userEmail, setUserEmail ] = useState(null)
-  const { navigate } = useNavigation()
-  const [openPrompt, setOpenPrompt] = useState(false)
-  const { setInfoEntered, setVerified } = route.params
+  const [userEmail, setUserEmail] = useState(null);
+  const { navigate } = useNavigation();
+  const [openPrompt, setOpenPrompt] = useState(false);
+  const { setInfoEntered, setVerified } = route.params;
 
   const logOut = () => {
-    signOut(auth)
-    setInfoEntered(false)
-    setVerified(false)
-  }
+    signOut(auth);
+    setInfoEntered(false);
+    setVerified(false);
+  };
 
   useEffect(() => {
-    const unSubscribe = onAuthStateChanged(auth, (user) => {setUser(user); setUserEmail(user.email)});
+    const unSubscribe = onAuthStateChanged(auth, (user) => { setUser(user); setUserEmail(user?.email) });
+    return unSubscribe;
   }, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.user}>
@@ -38,31 +36,31 @@ const SettingsScreen = ({ route }) => {
         <Text style={styles.userEmail}>{userEmail}</Text>
       </View>
       <View>
-        <Text style={styles.header}>Account</Text>
+        <Text style={styles.header}>Konto</Text>
       </View>
-        <Pressable style={styles.foodPreferencesContainer} key={"FoodPreferences"} onPress={() => navigate("FoodPreferences")}>
+        <TouchableOpacity style={styles.foodPreferencesContainer} onPress={() => navigate("FoodPreferences")}>
           <View style={styles.settingTextContainer}>
-            <Text style={styles.settingName}>Food Preferences</Text>
+            <Text style={styles.settingName}>Matpreferenser</Text>
           </View>
           <FontAwesome5 name="angle-right" style={styles.arrowIcon} />
-        </Pressable>
-        <Pressable style={styles.logOutContainer} key={"LogOut"} onPress={() => setOpenPrompt(true)}>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.logOutContainer} onPress={() => setOpenPrompt(true)}>
           <View style={styles.settingTextContainer}>
-            <Text style={styles.logOut}>Log out</Text>
+            <Text style={styles.logOut}>Logga ut</Text>
           </View>
-        </Pressable>
+        </TouchableOpacity>
       <Modal visible={openPrompt} animationType="fade" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalDescription}>
-                Do you really want to log out?
+                Vill du verkligen logga ut?
             </Text>
             <View style={styles.buttonContainerAlert}>
               <TouchableOpacity onPress={() => logOut()} style={styles.dismissButton}>
-                <Text style={styles.dismissButtonText}>Log out</Text>
+                <Text style={styles.dismissButtonText}>Logga ut</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setOpenPrompt(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>Stäng</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -73,12 +71,12 @@ const SettingsScreen = ({ route }) => {
 }
 
 export default function SettingsStack({ route }) {
-  const { setInfoEntered, setVerified } = route.params
+  const { setInfoEntered, setVerified } = route.params;
   return (
-      <Homestack.Navigator initialRouteName="SettingsScreen">
-        <Homestack.Screen options={{headerTitle: "Settings"}} name="SettingsScreen" component={SettingsScreen} initialParams={{setInfoEntered: (info) => setInfoEntered(info), setVerified: (info) => setVerified(info)}}/>
-        <Homestack.Screen name="FoodPreferences" component={FoodPreferences} />
-      </Homestack.Navigator>
+    <Homestack.Navigator initialRouteName="SettingsScreen">
+      <Homestack.Screen options={{ headerTitle: "Inställningar" }} name="SettingsScreen" component={SettingsScreen} initialParams={{ setInfoEntered, setVerified }} />
+      <Homestack.Screen name="FoodPreferences" options={{ headerTitle: "Matpreferenser" }} component={FoodPreferences} />
+    </Homestack.Navigator>
   )
 }
 
@@ -124,7 +122,7 @@ const styles = StyleSheet.create({
   },
   settingName: {
     fontSize: 16,
-    fontWeight: 'normal',
+    fontWeight: '400',
     textAlign: 'left',
   },
   arrowIcon: {
@@ -161,7 +159,7 @@ const styles = StyleSheet.create({
   },
   logOut: {
     fontSize: 16,
-    fontWeight: 'normal',
+    fontWeight: '400',
     textAlign: 'left',
     color: "red"
   },

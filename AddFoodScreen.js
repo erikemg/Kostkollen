@@ -1,47 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView, Pressable, Image, Alert } from 'react-native';
-import { push } from '@firebase/database';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView, Pressable, BackHandler } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { foodsInDb } from './firebase';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import InfoModal from './InfoModal';
+import preferences from './Preferences'
+import CodeScanner from './BarcodeScannerAdd';
 
-let allergens = {
-  gluten: {
-    title: "Gluten Free",
-    desc: "Gluten is a protein found in wheat, barley, and rye. It is commonly found in foods like bread, pasta, and baked goods.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  dairy: {
-    title: "Dairy Free",
-    desc: "Dairy products include milk, cheese, butter, and yogurt. They are a common source of lactose, which may cause intolerance or allergies in some individuals.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  nuts: {
-    title: "Free from Nuts",
-    desc: "Nuts such as peanuts, almonds, walnuts, and cashews are a common allergen. They can be found in various food products, including snacks, desserts, and sauces.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  seafood: {
-    title: "Free from Seafood",
-    desc: "Seafood allergies are typically associated with fish (such as salmon, tuna, and cod) and shellfish (such as shrimp, lobster, and crab). Allergic reactions can range from mild to severe.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  vegetarian: {
-    title: "Vegetarian",
-    desc: "Vegetarianism involves abstaining from consuming meat, poultry, and seafood. Vegetarians may still consume dairy products and eggs.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  vegan: {
-    title: "Vegan",
-    desc: "Veganism is a plant-based diet that excludes all animal products, including meat, poultry, seafood, dairy, and eggs. It is also a lifestyle that avoids the use of any animal-derived products.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-};
+let allergens = {...preferences}
+
+Object.values(allergens).forEach((allergen) => {
+  allergen.containsStatus = -1;
+});
 
 const AllergenContainers = ({ setShowInfo, openInfo }) => {
   const [activeButtonIndex, setActiveButtonIndex] = useState({});
@@ -58,6 +27,37 @@ const AllergenContainers = ({ setShowInfo, openInfo }) => {
         setActiveButtonIndex(activeButtonVar);
       };
 
+      let iconName = null;
+      switch (allergyKey) {
+        case "gluten":
+          iconName = "barley"
+          break;
+        case "dairy":
+          iconName = "cup-water"
+          break;
+        case "nuts":
+          iconName = "peanut"
+          break;
+        case "seafood":
+          iconName = "fish"
+          break;
+        case "vegan":
+          iconName = "sprout"
+          break;
+        case "vegetarian":
+          iconName = "leaf"
+          break;
+        case "sugar":
+          iconName = "cube-outline"
+          break;
+        case "keto":
+          iconName = "food-steak"
+          break;
+        case "eggs":
+          iconName = "egg"
+          break;
+      }
+
       return (
         <View style={styles.allergyContainer} key={allergy.title}>
           <View style={styles.allergyHeader}>
@@ -68,13 +68,22 @@ const AllergenContainers = ({ setShowInfo, openInfo }) => {
           </View>
           <View style={styles.buttonContainer}>
             <Pressable onPress={() => handleButtonPress(2, index)}>
-              <Image style={activeButtonIndex[index] === 2 ? styles.iconActive : styles.icon} source={require('./Icons/Greencheck.png')}/>
+              <View style={activeButtonIndex[index] === 2 ? styles.greenIconContainer : styles.greenIconContainerInactive} />
+              <View style={styles.iconWrapper}>
+                  <MaterialCommunityIcons name={iconName} size={50} color="white" />
+              </View>
             </Pressable>
             <Pressable onPress={() => handleButtonPress(1, index)}>
-              <Image style={activeButtonIndex[index] === 1 ? styles.iconActive : styles.icon} source={require('./Icons/Yellowminus.png')}/>
+              <View style={activeButtonIndex[index] === 1 ? styles.yellowIconContainer : styles.yellowIconContainerInactive} />
+              <View style={styles.iconWrapper}>
+                  <MaterialCommunityIcons name={iconName} size={50} color="white" />
+              </View>
             </Pressable>
             <Pressable onPress={() => handleButtonPress(0, index)}>
-              <Image style={activeButtonIndex[index] === 0 ? styles.iconActive : styles.icon} source={require('./Icons/Redcross.png')}/>
+              <View style={activeButtonIndex[index] === 0 ? styles.redIconContainer : styles.redIconContainerInactive} />
+              <View style={styles.iconWrapper}>
+                  <MaterialCommunityIcons name={iconName} size={50} color="white" />
+              </View>
             </Pressable>
           </View>
         </View>
@@ -86,16 +95,22 @@ const AllergenContainers = ({ setShowInfo, openInfo }) => {
 
 export default function AddFoodScreen({ route }) {
   const [showInfo, setShowInfo] = useState(false);
+  const [showInfoAll, setShowInfoAll] = useState(false)
   const [infoSelector, setInfoSelector] = useState("");
   const [foodName, setFoodName] = useState("")
   const [brandName, setBrandName] = useState("")
   const [barcode, setBarcode] = useState("")
+  const [ingredients, setIngredients] = useState("")
+  const [calories, setCalories] = useState("")
+  const [fat, setFat] = useState("")
+  const [carbs, setCarbs] = useState("")
+  const [sugar, setSugar] = useState("")
+  const [protein, setProtein] = useState("")
+  const [scannerOpen, setScannerOpen] = useState(false)
   const [openPrompt, setOpenPrompt] = useState(false)
   const [overrideEntered, setOverrideEntered] = useState(false)
   const [openPromptRequired, setOpenPromptRequired ] = useState(false)
   const { barcodeInitial } = route.params
-
-  console.log(barcodeInitial)
 
   const navigation = useNavigation();
 
@@ -112,117 +127,188 @@ export default function AddFoodScreen({ route }) {
     setOpenPromptRequired(true)
   }
 
-  useEffect(() => {
-    if(overrideEntered) {
-      handleCreateFood()
+  const spaceApiConvert = (text) => {
+    if (typeof text === 'undefined') {
+      return '';
     }
-  }, [overrideEntered])
+  
+    const textArr = text.split('');
+    const newArr = textArr.map((element, index) => {
+      if (element === ' ') {
+        return '%20';
+      } else {
+        return element;
+      }
+    });
+    const newStr = newArr.join('');
+    return newStr;
+  };
+  
+  useEffect(() => {
+    if (overrideEntered) {
+      handleCreateFood();
+    }
+  }, [overrideEntered]);
+  
+  useEffect(() => {
+    if (barcodeInitial != null) {
+      setBarcode(barcodeInitial);
+    }
+  }, []);
 
   useEffect(() => {
-    if(barcodeInitial != null) {
-      setBarcode(barcodeInitial)
-    }
-  }, [])
+    if(barcodeInitial) {
+        const onBackPress = () => {
+          navigation.navigate('CodeScanner')
+          return true
+        };
+  
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+  
+        return () => subscription.remove();
+    }}, [])
 
   const handleCreateFood = () => {
-    if (foodName === "" || brandName === "") {
+    if (false) {
       showAlert()
-    } else if (!Object.values(allergens).every((allergy) => (allergy.infoEntered)) && overrideEntered === false) {
-      setOpenPrompt(true)
     } else {
-      push(foodsInDb, {
-        foodBrand: brandName,
-        foodName: foodName,
-        barcode: barcode,
-        timesClicked: 0,
-        allergens: {
-          gluten: allergens.gluten.containsStatus,
-          dairy: allergens.dairy.containsStatus,
-          nuts: allergens.nuts.containsStatus,
-          seafood: allergens.seafood.containsStatus,
-          vegetarian: allergens.vegetarian.containsStatus,
-          vegan: allergens.vegan.containsStatus
-        },
-      })
-      navigation.goBack();
+    fetch(`https://world.openfoodfacts.org/cgi/product_jqm2.pl?code=${barcode}&user_id=erigor0503&password=IUsedToBench405&product_name=${spaceApiConvert(foodName)}&brands=${spaceApiConvert(brandName)}&ingredients_text=${spaceApiConvert(ingredients)}&nutriment_energy=${calories}&nutriment_energy_unit=kcal&nutriment_fat=${fat}&nutriment_carbohydrates=${carbs}&nutriment_protein=${protein}&nutriment_sugar=${sugar}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Data", data);
+    })
+    .catch(error => {
+        console.error("Erorr :", error);
+    });
+      if(barcodeInitial) {
+        navigation.navigate('CodeScanner');
+      } else {
+        navigation.goBack()
+      }
     }
   }
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.shadowContainer}>
-        <View>
-          <Text style={styles.header}>Food Name</Text>
-          <TextInput placeholder="Enter the food name" style={styles.inputField} onChangeText={(text) => setFoodName(text)}/>
+  if(scannerOpen) {
+    return <CodeScanner setBarcode={(data) => setBarcode(data)} setScannerOpen={(data) => setScannerOpen(data)} />
+  } else {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.shadowContainer}>
+          <View>
+            <Text style={styles.header}>Matnamn</Text>
+            <TextInput placeholder="Ange matnamnet" style={styles.inputField} onChangeText={(text) => setFoodName(text)}/>
+          </View>
+          <View>
+            <Text style={styles.header}>Märkesnamn</Text>
+            <TextInput placeholder="Ange märkesnamnet" style={styles.inputField} onChangeText={(text) => setBrandName(text)}/>
+          </View>
+          <View>
+            <Text style={styles.header}>Streckkod</Text>
+            <TextInput placeholder="Ange streckkoden" style={styles.inputField} onChangeText={(text) => setBarcode(text)} value={barcode}></TextInput>
+            <TouchableOpacity style={styles.cameraContainer} onPress={() => setScannerOpen(true)}>
+              <MaterialCommunityIcons name="scan-helper" color="green" size={25}/>
+            </TouchableOpacity>
+          </View>
+          <View>
+            <Text style={styles.header}>Ingredienser</Text>
+            <TextInput placeholder="Ange ingredienserna" style={styles.inputField} onChangeText={(text) => setIngredients(text)} value={ingredients}/>
+          </View>
+          <View>
+            <Text style={styles.header}>Näringsvärde per 100g</Text>
+            <View style={styles.nutrimentContainer}>
+              <Text style={styles.smallHeader}>Kcal</Text>
+              <TextInput placeholder="Ange Kcal" style={styles.nutrimentInput} onChangeText={(text) => setCalories(text)} value={calories}/>
+            </View>
+            <View style={styles.nutrimentContainer}>
+              <Text style={styles.smallHeader}>Fett</Text>
+              <TextInput placeholder="Ange Fett" style={styles.nutrimentInput} onChangeText={(text) => setFat(text)} value={fat}/>
+            </View>
+            <View style={styles.nutrimentContainerCarbs}>
+              <Text style={styles.smallHeader}>Kolhydrater</Text>
+              <TextInput placeholder="Ange Kolhydrater" style={styles.nutrimentInput} onChangeText={(text) => setCarbs(text)} value={carbs}/>
+            </View>
+            <View style={styles.nutrimentContainerSugar}>
+              <Text style={styles.smallHeader}>Varav sockerarter</Text>
+              <TextInput placeholder="Ange Sockerarter" style={styles.nutrimentInput} onChangeText={(text) => setSugar(text)} value={sugar}/>
+             </View>
+            <View style={styles.nutrimentContainer}>
+              <Text style={styles.smallHeader}>Protein</Text>
+              <TextInput placeholder="Ange Protein" style={styles.nutrimentInput} onChangeText={(text) => setProtein(text)} value={protein}/>
+            </View>
+          </View>
+          <View style={styles.hidden}>
+            <View style={styles.allergenInfoHeader}>
+              <Text style={styles.smallHeader}>Allergeninformation</Text>
+              <TouchableOpacity onPress={() => { setShowInfoAll(true) }} style={styles.infoButton}>
+                <Text style={styles.infoButtonText}>i</Text>
+              </TouchableOpacity>
+            </View>
+            <AllergenContainers setShowInfo={setShowInfo} openInfo={openInfo} />
+          </View>
+          <View style={styles.addFoodButtonContainer}>
+          <TouchableOpacity onPress={handleCreateFood} style={styles.addFoodButton}>
+            <Text style={styles.addFoodText}>Skapa mat</Text>
+          </TouchableOpacity>
+          </View>
         </View>
-        <View>
-          <Text style={styles.header}>Food Brand</Text>
-          <TextInput placeholder="Enter the brand name" style={styles.inputField} onChangeText={(text) => setBrandName(text)}/>
-        </View>
-        <View>
-          <Text style={styles.header}>Barcode(optional)</Text>
-          <TextInput placeholder="Enter the barcode" style={styles.inputField} onChangeText={(text) => setBarcode(text)} value={barcode}/>
-        </View>
-        <View>
-          <Text style={styles.header}>Allergen Info</Text>
-          <AllergenContainers setShowInfo={setShowInfo} openInfo={openInfo} />
-        </View>
-        <View style={styles.addFoodButtonContainer}>
-        <TouchableOpacity onPress={handleCreateFood} style={styles.addFoodButton}>
-          <Text style={styles.addFoodText}>Create food</Text>
-        </TouchableOpacity>
-        </View>
-      </View>
-
-      {infoSelector !== "" && (
-        <Modal visible={showInfo} animationType="fade" transparent>
+  
+        {infoSelector !== "" && (
+          <Modal visible={showInfo} animationType="fade" transparent>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{allergens[infoSelector].title}</Text>
+                <Text style={styles.modalDescription}>
+                  {allergens[infoSelector].desc}
+                </Text>
+                  <TouchableOpacity onPress={() => setShowInfo(false)} style={styles.closeButton}>
+                    <Text style={styles.closeButtonText}>Stäng</Text>
+                  </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        )}
+        <Modal visible={openPrompt} animationType="fade" transparent>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{allergens[infoSelector].title}</Text>
-              <Text style={styles.modalDescription}>
-                {allergens[infoSelector].desc}
+              <Text style={styles.modalDescriptionAllergensPrompt}>
+                  Du har inte angett information för några av allergenerna/matpreferenserna, vill du lägga till den saknade informationen?
               </Text>
-                <TouchableOpacity onPress={() => setShowInfo(false)} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>Close</Text>
+              <View style={styles.buttonContainerAleart}>
+                <TouchableOpacity onPress={() => overrideEnteredFunc()} style={styles.dismissButton}>
+                  <Text style={styles.dismissButtonText}>Avvisa</Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => setOpenPrompt(false)} style={styles.enterInfoButton}>
+                  <Text style={styles.enterInfoButtonText}>Ange info</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
-      )}
-      <Modal visible={openPrompt} animationType="fade" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalDescriptionAllergensPrompt}>
-                You did not enter the information for some of the allergens/food prefrences, do you want to add the missing information?
-            </Text>
-            <View style={styles.buttonContainerAleart}>
-              <TouchableOpacity onPress={() => overrideEnteredFunc()} style={styles.dismissButton}>
-                <Text style={styles.dismissButtonText}>Dismiss</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setOpenPrompt(false)} style={styles.enterInfoButton}>
-                <Text style={styles.enterInfoButtonText}>Enter info</Text>
-              </TouchableOpacity>
+        <Modal visible={openPromptRequired} animationType="fade" transparent>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalDescription}>
+                  Du måste ange info i alla fälten
+              </Text>
+              <View style={styles.buttonContainerAleart}>
+                <TouchableOpacity onPress={() => setOpenPromptRequired(false)} style={styles.enterInfoButton}>
+                  <Text style={styles.enterInfoButtonText}>Ange info</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-      <Modal visible={openPromptRequired} animationType="fade" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalDescription}>
-                You need to enter a food name and brand.
-            </Text>
-            <View style={styles.buttonContainerAleart}>
-              <TouchableOpacity onPress={() => setOpenPromptRequired(false)} style={styles.enterInfoButton}>
-                <Text style={styles.enterInfoButtonText}>Enter info</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
-  );
+        </Modal>
+        {showInfoAll && 
+         <InfoModal setShowInfo={info => setShowInfoAll(info)} />
+         }
+      </ScrollView>
+    );
+  }
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -324,17 +410,6 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
   },
-  icon: {
-    width: 60,
-    height: 60,
-    marginRight: 10,
-    opacity: 0.1
-  },
-  iconActive: {
-    width: 60,
-    height: 60,
-    marginRight: 10,
-  },
   addFoodButton: {
     backgroundColor: '#00FF00',
     borderRadius: 50,
@@ -385,5 +460,121 @@ const styles = StyleSheet.create({
   modalDescriptionAllergensPrompt: {
     fontSize: 14,
     textAlign: "center"
+  },
+  redIconContainer: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    margin: 5
+  },
+  greenIconContainer: {
+    backgroundColor: 'green',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    margin: 5
+  },
+  yellowIconContainer: {
+    backgroundColor: '#ffee00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    margin: 5
+  },
+  redIconContainerInactive: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    opacity: 0.1,
+    margin: 5
+  },
+  greenIconContainerInactive: {
+    backgroundColor: 'green',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    opacity: 0.1,
+    margin: 5
+  },
+  yellowIconContainerInactive: {
+    backgroundColor: '#ffee00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    opacity: 0.1,
+    margin: 5
+  },
+  allergenInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5
+  },
+  iconWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    margin: 'auto',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  nutrimentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingLeft: 5,
+    paddingBottom: 5,
+    alignItems: 'center',
+    justifyContent: "space-between",
+    borderBottomColor: "#333",
+    borderBottomWidth: 1
+  },
+  nutrimentContainerCarbs: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingLeft: 5,
+    paddingBottom: 5,
+    alignItems: 'center',
+    justifyContent: "space-between",
+  },
+  nutrimentContainerSugar: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingLeft: 20,
+    paddingBottom: 5,
+    alignItems: 'center',
+    justifyContent: "space-between",
+    borderBottomColor: "#333",
+    borderBottomWidth: 1
+  },
+  nutrimentInput: {
+    paddingTop: 10,
+    width: 150
+  },
+  hidden: {
+    display: "none"
+  },
+  cameraContainer: {
+    flex: 1,
+    flexDirection: "row",
+    width: 300,
+    height: 30,
+    justifyContent: "flex-end",
+    marginTop: -57,
+    marginBottom: 30
   }
 });

@@ -1,78 +1,80 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView, Pressable, Image, Alert } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView} from 'react-native';
 import { child, update, onValue } from '@firebase/database';
 import { foodsInDb } from './firebase';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import InfoModal from './InfoModal';
+import preferences from './Preferences'
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+const adUnitId = __DEV__ ? TestIds.BANNER : 'ca-app-pub-7402081473871492/8813220240';
 
-let allergens = {
-  gluten: {
-    title: "Gluten Free",
-    desc: "Gluten is a protein found in wheat, barley, and rye. It is commonly found in foods like bread, pasta, and baked goods.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  dairy: {
-    title: "Dairy Free",
-    desc: "Dairy products include milk, cheese, butter, and yogurt. They are a common source of lactose, which may cause intolerance or allergies in some individuals.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  nuts: {
-    title: "Free from Nuts",
-    desc: "Nuts such as peanuts, almonds, walnuts, and cashews are a common allergen. They can be found in various food products, including snacks, desserts, and sauces.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  seafood: {
-    title: "Free from Seafood",
-    desc: "Seafood allergies are typically associated with fish (such as salmon, tuna, and cod) and shellfish (such as shrimp, lobster, and crab). Allergic reactions can range from mild to severe.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  vegetarian: {
-    title: "Vegetarian",
-    desc: "Vegetarianism involves abstaining from consuming meat, poultry, and seafood. Vegetarians may still consume dairy products and eggs.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-  vegan: {
-    title: "Vegan",
-    desc: "Veganism is a plant-based diet that excludes all animal products, including meat, poultry, seafood, dairy, and eggs. It is also a lifestyle that avoids the use of any animal-derived products.",
-    containsStatus: 0,
-    infoEntered: false
-  },
-};
+let allergens = {...preferences}
 
-const AllergenContainers = ({ setShowInfo, openInfo, allergensContainsInfo }) => {
+const AllergenContainers = ({ openInfo, allergensContainsInfo }) => {
+  const getIconContainerStyle = (containsStatus) => {
+    switch (containsStatus) {
+      case -1: 
+        return styles.greyIconContainer;
+      case 0:
+        return styles.redIconContainer;
+      case 1:
+        return styles.yellowIconContainer;
+      case 2:
+        return styles.greenIconContainer;
+      default:
+        return null;
+    }
+  };
   return (
-    Object.keys(allergens).map((allergyKey) => {
-      const containsStatus = allergensContainsInfo[allergyKey];
+    Object.keys(allergens).map((preference) => {
+      const containsStatus = allergensContainsInfo[preference];
 
-      let iconSource;
-      switch(containsStatus) {
-        case 0:
-          iconSource = require('./Icons/Redcross.png');
-          break;
-        case 1:
-          iconSource = require('./Icons/Yellowminus.png');
-          break;
-        case 2:
-          iconSource = require('./Icons/Greencheck.png');
-          break;
-        default:
-          iconSource = null;
-          break;
-      }
+        const allergenValue = allergens[preference].containsStatus;
+        let iconName = null;
+        switch (preference) {
+          case "gluten":
+            iconName = "barley"
+            break;
+          case "dairy":
+            iconName = "cup-water"
+            break;
+          case "nuts":
+            iconName = "peanut"
+            break;
+          case "seafood":
+            iconName = "fish"
+            break;
+          case "vegan":
+            iconName = "sprout"
+            break;
+          case "vegetarian":
+            iconName = "leaf"
+            break;
+          case "sugar":
+            iconName = "cube-outline"
+            break;
+          case "keto":
+            iconName = "food-steak"
+            break;
+          case "eggs":
+            iconName = "egg"
+            break;
+        }
 
       return (
-        <View style={styles.allergyContainer} key={allergens[allergyKey].title}>
+        <View style={styles.allergyContainer} key={allergens[preference].title}>
           <View style={styles.allergyHeader}>
-            <Text style={styles.smallHeader}>{allergens[allergyKey].title}</Text>
-            <TouchableOpacity onPress={() => { setShowInfo(true); openInfo(allergyKey) }} style={styles.infoButton}>
+            <Text style={styles.smallHeader}>{allergens[preference].title}</Text>
+            <TouchableOpacity onPress={() => { openInfo(preference) }} style={styles.infoButton}>
               <Text style={styles.infoButtonText}>i</Text>
             </TouchableOpacity>
           </View>
-          {iconSource && <Image style={styles.iconActive} source={iconSource} />}
+          {iconName && 
+          <View style={getIconContainerStyle(containsStatus)}>
+            <MaterialCommunityIcons name={iconName} size={50} color="white" />
+          </View>}
         </View>
       );
     })
@@ -84,9 +86,10 @@ export default function FoodDetailScreen({ route }) {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [foodObject, setFoodObject] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showInfoAll, setShowInfoAll] = useState(false);
   const [infoSelector, setInfoSelector] = useState("");
   const [prompt, setPrompt] = useState(false)
-  const {foodName, brandName, allergensContainsInfo, foodId, barcode, setBarcode, isFocused } = route.params
+  const {foodName, brandName, allergensContainsInfo, foodId, verified, barcode } = route.params
   const { navigate } = useNavigation()
 
   const openInfo = (allergyKey) => {
@@ -123,21 +126,36 @@ export default function FoodDetailScreen({ route }) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.shadowContainer}>
-        <View>
-          <Text style={styles.smallHeader}>Food Name</Text>
-          <Text style={styles.header}>{foodName}</Text>
+        <View style={styles.nameAndVerified}>
+          <View>
+            <Text style={styles.smallHeader}>Matnamn</Text>
+            <Text style={styles.header}>{foodName}</Text>
+          </View>
+          {verified && <MaterialIcons style={styles.verifiedIcon} name="verified-user" size={30}/> }
         </View>
         <View>
-          <Text style={styles.smallHeader}>Food Brand</Text>
+          <Text style={styles.smallHeader}>Märke</Text>
           <Text style={styles.header}>{brandName}</Text>
         </View>
+        <BannerAd
+      unitId={adUnitId}
+      size={BannerAdSize.BANNER}
+      requestOptions={{
+        requestNonPersonalizedAdsOnly: true,
+      }}
+    />
         <View>
-          <Text style={styles.smallHeader}>Allergen Info</Text>
-          <AllergenContainers setShowInfo={setShowInfo} openInfo={openInfo} foodName={foodName} brandName={brandName} allergensContainsInfo={allergensContainsInfo}/>
-          {barcode && <View style={styles.bindBarcodeButtonContainer}>
-            <Text style={styles.bindBarcodeDescription}>Do you want to link the barcode you scanned to this food?</Text>
+          <View style={styles.allergenInfoHeader}>
+            <Text style={styles.smallHeader}>Allergeninformation</Text>
+            <TouchableOpacity onPress={() => { setShowInfoAll(true) }} style={styles.infoButton}>
+              <Text style={styles.infoButtonText}>i</Text>
+            </TouchableOpacity>
+          </View>
+          <AllergenContainers openInfo={openInfo} foodName={foodName} brandName={brandName} allergensContainsInfo={allergensContainsInfo}/>
+          {false && <View style={styles.bindBarcodeButtonContainer}>
+            <Text style={styles.bindBarcodeDescription}>Vill du koppla den skannade streckkoden till det här livsmedlet?</Text>
             <TouchableOpacity style={styles.bindBarcodeButton}>
-              <Text style={styles.bindBarcodeText} onPress={handleBindBarcode}>Link barcode</Text>
+              <Text style={styles.bindBarcodeText} onPress={handleBindBarcode}>Koppla streckkod</Text>
             </TouchableOpacity>
         </View>}
         </View>
@@ -152,7 +170,7 @@ export default function FoodDetailScreen({ route }) {
                 {allergens[infoSelector].desc}
               </Text>
                 <TouchableOpacity onPress={() => setShowInfo(false)} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>Close</Text>
+                  <Text style={styles.closeButtonText}>Stäng</Text>
                 </TouchableOpacity>
             </View>
           </View>
@@ -161,10 +179,13 @@ export default function FoodDetailScreen({ route }) {
       <Modal visible={prompt} animationType="fade" transparent>
         <View style={styles.boundContainer}>
         <View style={styles.boundMessageSuccess}>
-        <Text style={styles.boundSuccessText}>The barcode was linked to the item</Text>
+        <Text style={styles.boundSuccessText}>Streckkoden kopplades till livsmedlet</Text>
       </View>
         </View>
        </Modal>
+       {showInfoAll && 
+       <InfoModal setShowInfo={info => setShowInfoAll(info)} />
+       }
     </ScrollView>
   );
 };
@@ -316,7 +337,7 @@ const styles = StyleSheet.create({
   bindBarcodeButton: {
     backgroundColor: '#00FF00',
     borderRadius: 50,
-    width: 150,
+    width: 170,
     height: 50,
     justifyContent: "center"
   },
@@ -358,5 +379,52 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  redIconContainer: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70
+  },
+  greyIconContainer: {
+    backgroundColor: 'grey',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70
+  },
+  greenIconContainer: {
+    backgroundColor: 'green',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70
+  },
+  yellowIconContainer: {
+    backgroundColor: '#ffee00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    width: 70,
+    height: 70
+  },
+  allergenInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5
+  },
+  nameAndVerified: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  verifiedIcon: {
+    color: 'green',
+    paddingRight: 10
   }
 });

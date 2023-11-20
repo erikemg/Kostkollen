@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "284520991509",
+    "firebase_url": "https://alergyapp-78ded-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "alergyapp-78ded",
+    "storage_bucket": "alergyapp-78ded.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:284520991509:android:6c155e3b8db2ca8206771c",
+        "android_client_info": {
+          "package_name": "com.evak.kostkollen"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "284520991509-vftchi0gqdc16odm02kqqns5sjjgjjnn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.evak.kostkollen",
+            "certificate_hash": "abc73ae6123147da02b295defdffe1236d9656ce"
+          }
+        },
+        {
+          "client_id": "284520991509-b7igt8nj6dsur17llpd4l913gbl6qan2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQ9R34yd_xNUXUi2_RLwsEvR8pQfABYf8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "284520991509-5ttni9d5cic20rb7nd1mn8s9f2dqrfug.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

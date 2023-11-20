@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "AlergyApp",
-    "slug": "AlergyApp",
+    "name": "Kostkollen",
+    "slug": "kostkollen",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/FoodCheckIcon.png",
+    "icon": "./assets/KostkollenLogo.png",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/FoodCheckIcon.png",
-      "resizeMode": "contain",
+      "image": "./assets/KostkollenOpenLoad.png",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
@@ -19,32 +19,55 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access camera.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
-      }
+      },
+      "bundleIdentifier": "com.evak.kostkollen"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/FoodCheckIcon.png",
+        "foregroundImage": "./assets/KostkollenLogoAdaptive.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
         "android.permission.CAMERA"
-      ]
+      ],
+      "package": "com.evak.kostkollen"
     },
     "web": {
-      "favicon": "./assets/FoodCheckIcon.png"
+      "favicon": "./assets/KostkollenLogo.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
+          }
+        }
+      ],
       [
         "expo-barcode-scanner",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.7.0"
+          }
+        }
       ]
     ],
+    "scheme": "kostkollen",
     "extra": {
       "eas": {
-        "projectId": "c4f7a955-4ead-458a-a460-aea95533c7ad"
+        "projectId": "5215e5cc-2e59-4bb1-90a7-179417c73544"
       }
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-7402081473871492~1608845194",
+    "delay_app_measurement_init": true
   }
 }

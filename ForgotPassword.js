@@ -16,9 +16,9 @@ export default function ForgotPassword() {
   const handleResetPassword = async () => {
     try {
       await sendPasswordResetEmail(auth, email);
-      setMessage("Email sent successfully");
+      setMessage("E-post skickad");
     } catch (error) {
-      setMessage('Error sending password reset email: ' + error);
+      setMessage('Fel vid sändning av återställnings-e-post: ' + error);
     }
   };
 
@@ -55,28 +55,28 @@ export default function ForgotPassword() {
   return (
     <SafeAreaView style={styles.container} behavior="padding">
       <View style={styles.inputContainer}>
-        <Text style={styles.header}>Reset Password</Text>
+        <Text style={styles.header}>Återställ lösenord</Text>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="email-outline" style={styles.icons} />
           <View style={styles.devider} />
           <TextInput
-            placeholder='Email'
+            placeholder='E-post'
             onChangeText={(text) => setEmail(text)}
             style={styles.input}
           />
         </View>
         <TouchableOpacity style={styles.submitButton} onPress={() => handleResetPassword()}>
-          <Text style={styles.submitText}>Submit</Text>
+          <Text style={styles.submitText}>Skicka</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.loginBackButton} onPress={() => {navigation.goBack()}}>
-          <Text style={styles.loginBackText}>Go back to login</Text>
+          <Text style={styles.loginBackText}>Tillbaka till inloggning</Text>
         </TouchableOpacity>
       </View>
-      {message === "Email sent successfully" && 
+      {message === "E-post skickad" && 
       <View style={styles.emailMessageSuccess}>
         <Text style={styles.emailText}>{message}</Text>
       </View>}
-      {message !== "Email sent successfully" && message !== "" && 
+      {message !== "E-post skickad" && message !== "" && 
       <View style={styles.emailMessageError}>
         <Text style={styles.emailText}>{message}</Text>
       </View>}
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   submitText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
   },
   emailMessageSuccess: {
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignContent: "center",
     borderRadius: 10,
-    height: 40,
-    width: 200,
+    height: 30,
+    width: 150,
   },
   emailMessageError: {
     position: "absolute",
@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   emailText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     textAlign: "center",
     padding: 5,
   },
   header: {
     fontSize: 30,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     textAlign: "center",
     marginBottom: 20,
   },
@@ -169,7 +169,6 @@ const styles = StyleSheet.create({
   },
   loginBackText: {
     color: 'black',
-    fontWeight: 'thin',
     textAlign: 'center',
     textDecorationLine: 'underline'
   },

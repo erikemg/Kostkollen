@@ -1,203 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal, Pressable, Image } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from 'react-native-gesture-handler';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import { auth, usersRef } from './firebase';
-import { createUserWithEmailAndPassword, onAuthStateChanged} from 'firebase/auth';
-import { push } from 'firebase/database';
+import { auth } from './firebase';
+import { createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 
-let allergens = {
-    gluten: {
-      title: "Gluten Free",
-      desc: "Gluten is a protein found in wheat, barley, and rye. It is commonly found in foods like bread, pasta, and baked goods.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-    dairy: {
-      title: "Dairy Free",
-      desc: "Dairy products include milk, cheese, butter, and yogurt. They are a common source of lactose, which may cause intolerance or allergies in some individuals.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-    nuts: {
-      title: "Free from Nuts",
-      desc: "Nuts such as peanuts, almonds, walnuts, and cashews are a common allergen. They can be found in various food products, including snacks, desserts, and sauces.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-    seafood: {
-      title: "Free from Seafood",
-      desc: "Seafood allergies are typically associated with fish (such as salmon, tuna, and cod) and shellfish (such as shrimp, lobster, and crab). Allergic reactions can range from mild to severe.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-    vegetarian: {
-      title: "Vegetarian",
-      desc: "Vegetarianism involves abstaining from consuming meat, poultry, and seafood. Vegetarians may still consume dairy products and eggs.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-    vegan: {
-      title: "Vegan",
-      desc: "Veganism is a plant-based diet that excludes all animal products, including meat, poultry, seafood, dairy, and eggs. It is also a lifestyle that avoids the use of any animal-derived products.",
-      containsStatus: 0,
-      infoEntered: false
-    },
-  };
-  
-  const AllergenContainers = ({ setShowInfo, openInfo }) => {
-    const [activeButtonIndex, setActiveButtonIndex] = useState({});
-  
-    return (
-      Object.keys(allergens).map((allergyKey, index) => {
-        const allergy = allergens[allergyKey];
-  
-        const handleButtonPress = (status, groupIndex) => {
-          allergens[allergyKey].containsStatus = status;
-          allergens[allergyKey].infoEntered = true;
-          activeButtonVar = {...activeButtonIndex}
-          activeButtonVar[groupIndex] = status
-          setActiveButtonIndex(activeButtonVar);
-        };
-  
-        return (
-          <View style={styles.allergyContainer} key={allergy.title}>
-            <View style={styles.allergyHeader}>
-              <Text style={styles.smallHeader}>{allergy.title}</Text>
-              <TouchableOpacity onPress={() => { setShowInfo(true); openInfo(allergyKey) }} style={styles.infoButton}>
-                <Text style={styles.infoButtonText}>i</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.buttonContainer}>
-              <Pressable onPress={() => handleButtonPress(2, index)}>
-                <Image style={activeButtonIndex[index] === 2 ? styles.iconActive : styles.icon} source={require('./Icons/Greencheck.png')}/>
-              </Pressable>
-              <Pressable onPress={() => handleButtonPress(1, index)}>
-                <Image style={activeButtonIndex[index] === 1 ? styles.iconActive : styles.icon} source={require('./Icons/Yellowminus.png')}/>
-              </Pressable>
-              <Pressable onPress={() => handleButtonPress(0, index)}>
-                <Image style={activeButtonIndex[index] === 0 ? styles.iconActive : styles.icon} source={require('./Icons/Redcross.png')}/>
-              </Pressable>
-            </View>
-          </View>
-        );
-      })
-    );
-  };
-  
-  
-  const AllergenPreferences = ({ setInfoEntered }) => {
-    const [showInfo, setShowInfo] = useState(false);
-    const [infoSelector, setInfoSelector] = useState("");
-    const [openPrompt, setOpenPrompt] = useState(false)
-    const [overrideEntered, setOverrideEntered] = useState(false)
-    const [ user, setUser ] = useState(null);
-
-  
-    const openInfo = (allergyKey) => {
-      setShowInfo(true);
-      setInfoSelector(allergyKey);
-    };
-  
-    const overrideEnteredFunc = () => {
-      setOverrideEntered(true);
-    }
-  
-    useEffect(() => {
-      if(overrideEntered) {
-        handleCreatePreferences()
-      }
-    }, [overrideEntered])
-
-    useEffect(() => {
-      const unSubscribe = onAuthStateChanged(auth, (user) => {setUser(user)})
-      return () => unSubscribe();
-    }, [])  
-
-    const addPreferencesToDb = async () => {
-      push(usersRef, {
-        gluten: allergens.gluten.containsStatus,
-        dairy: allergens.dairy.containsStatus,
-        nuts: allergens.nuts.containsStatus,
-        seafood: allergens.seafood.containsStatus,
-        vegetarian: allergens.vegetarian.containsStatus,
-        vegan: allergens.vegan.containsStatus
-      })
-    };
-  
-    const handleCreatePreferences = () => {
-      if (!Object.values(allergens).every((allergy) => (allergy.infoEntered)) && overrideEntered === false) {
-        setOpenPrompt(true)
-      } else {
-        addPreferencesToDb()
-        setInfoEntered(true)
-      }
-    }
-  
-    return (
-      <ScrollView>
-        <View style={styles.shadowContainer}>
-          <View>
-            <Text style={styles.header}>How would you like your foods?</Text>
-            <AllergenContainers setShowInfo={setShowInfo} openInfo={openInfo} />
-          </View>
-          <View style={styles.addFoodButtonContainer}>
-          <TouchableOpacity onPress={handleCreatePreferences} style={styles.addFoodButton}><Text style={styles.addFoodText}>Save prefrences</Text></TouchableOpacity>
-          </View>
-        </View>
-  
-        {infoSelector !== "" && (
-          <Modal visible={showInfo} animationType="fade" transparent>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>{allergens[infoSelector].title}</Text>
-                <Text style={styles.modalDescription}>
-                  {allergens[infoSelector].desc}
-                </Text>
-                  <TouchableOpacity onPress={() => setShowInfo(false)} style={styles.closeButton}>
-                    <Text style={styles.closeButtonText}>Close</Text>
-                  </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
-        )}
-        <Modal visible={openPrompt} animationType="fade" transparent>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalDescriptionAllergensPrompt}>
-                  You did not enter the information for some of the allergens/food prefrences, do you want to add the missing information?
-              </Text>
-              <View style={styles.buttonContainerAleart}>
-                <TouchableOpacity onPress={() => overrideEnteredFunc()} style={styles.dismissButton}>
-                  <Text style={styles.dismissButtonText}>Dismiss</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setOpenPrompt(false)} style={styles.enterInfoButton}>
-                  <Text style={styles.enterInfoButtonText}>Enter info</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </ScrollView>
-    );
-  };
-
 export default function CreateAccount({ route }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2 ] = useState("");
-  const [displayError, setDisplayError] = useState("");
-  const [ user, setUser ] = useState(null);
-  const { infoEntered, setInfoEntered } = route.params
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [displayError, setDisplayError] = useState('');
+  const [user, setUser] = useState(null);
+  const { promptAsyncGoogle, setLoading } = route.params;
   const slideAnimation = useRef(new Animated.Value(0)).current;
-  const { navigate } = useNavigation();
+  const navigate = useNavigation();
 
   useEffect(() => {
-    if (displayError !== "") {
+    if (displayError !== '') {
       showNotification();
     }
   }, [displayError]);
@@ -216,7 +38,7 @@ export default function CreateAccount({ route }) {
         duration: 500,
         useNativeDriver: false,
       }).start(() => {
-        setDisplayError("");
+        setDisplayError('');
       });
     }, 2000);
   };
@@ -228,12 +50,10 @@ export default function CreateAccount({ route }) {
       } catch (error) {
         setDisplayError(error.message);
       }
-      setNavigateEmail(true)
     } else {
-      setDisplayError("The passwords don't match");
+      setDisplayError("Lösenorden matchar inte");
     }
-  }
-  
+  };
 
   useEffect(() => {
     const unSubscribe = onAuthStateChanged(auth, (user) => {
@@ -244,56 +64,56 @@ export default function CreateAccount({ route }) {
 
   return (
     <SafeAreaView style={styles.container} behavior="padding">
-        {user != null ? 
-        <AllergenPreferences setInfoEntered={(info) => setInfoEntered(info)}/> : 
-        <View style={styles.inputContainer}>
-        <Text style={styles.header}>Create Account</Text>
+      <View style={styles.inputContainer}>
+        <Text style={styles.header}>Skapa konto</Text>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="account-outline" style={styles.icons} />
           <View style={styles.devider} />
-          <TextInput placeholder='Email' onChangeText={(text) => setEmail(text)} style={styles.input} />
+          <TextInput
+            placeholder="E-post"
+            onChangeText={(text) => setEmail(text)}
+            style={styles.input}
+          />
         </View>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="lock-outline" style={styles.icons} />
           <View style={styles.devider} />
-          <TextInput placeholder='Password' onChangeText={(text) => setPassword(text)} secureTextEntry={true} style={styles.input} />
+          <TextInput
+            placeholder="Lösenord"
+            onChangeText={(text) => setPassword(text)}
+            secureTextEntry={true}
+            style={styles.input}
+          />
         </View>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="lock-outline" style={styles.icons} />
           <View style={styles.devider} />
-          <TextInput placeholder='Confirm Password' onChangeText={(text) => setPassword2(text)} secureTextEntry={true} style={styles.input} />
+          <TextInput
+            placeholder="Bekräfta lösenord"
+            onChangeText={(text) => setPassword2(text)}
+            secureTextEntry={true}
+            style={styles.input}
+          />
         </View>
-        <TouchableOpacity style={styles.createAccount2} onPress={() => handleCreateAccount()}>
-          <Text style={styles.createAccountText2}>Create Account</Text>
+        <TouchableOpacity style={styles.createAccount2} onPress={handleCreateAccount}>
+          <Text style={styles.createAccountText2}>Skapa konto</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.loginBackButton} onPress={() => {navigate.goBack()}}>
-          <Text style={styles.loginBackText}>Go back to login</Text>
+        <TouchableOpacity style={styles.loginBackButton} onPress={() => navigate.goBack()}>
+          <Text style={styles.loginBackText}>Gå tillbaka till inloggning</Text>
         </TouchableOpacity>
         <View style={styles.horizontalDevider} />
-        <TouchableOpacity style={styles.googleButton}>
+        <TouchableOpacity style={styles.googleButton} onPress={() => { promptAsyncGoogle(); setLoading(true) }}>
           <View style={styles.buttonIcon}>
             <AntDesign name="google" style={styles.googleIcon} />
           </View>
-          <Text style={styles.googleTextCreate}>Create account with Google</Text>
+          <Text style={styles.googleTextCreate}>Skapa konto med Google</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.facebookButton}>
-          <View style={styles.buttonIcon}>
-            <MaterialCommunityIcons name="facebook" style={styles.facebookIcon} />
-          </View>
-          <Text style={styles.facebookTextCreate}>Create account with Facebook</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.appleButton}>
-          <View style={styles.buttonIcon}>
-            <FontAwesome5 name="apple" style={styles.appleIcon} />
-          </View>
-          <Text style={styles.appleTextCreate}>Create account with Apple</Text>
-        </TouchableOpacity>
-      </View>}
-      {displayError !== "" && (
-          <View style={styles.passwordsDontMatch}>
-            <Text style={styles.passwordsDontMatchText}>{displayError}</Text>
-          </View>
-        )}
+      </View>
+      {displayError !== '' && (
+        <View style={styles.passwordsDontMatch}>
+          <Text style={styles.passwordsDontMatchText}>{displayError}</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -505,7 +325,7 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   loginText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   createAccount: {
@@ -518,7 +338,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   createAccountText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   createAccount2: {
     backgroundColor: "#00FF00",
@@ -530,7 +350,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   createAccountText2: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   horizontalDevider: {
@@ -559,13 +379,13 @@ const styles = StyleSheet.create({
     color: "black"
   },
   googleText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     flex: 1,
     textAlign: "center",
     marginRight: 50
   },
   googleTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     flex: 1,
     textAlign: "center",
     marginRight: 30
@@ -586,14 +406,14 @@ const styles = StyleSheet.create({
     color: "white",
   },
   facebookText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
     marginRight: 50
   },
   facebookTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
@@ -616,14 +436,14 @@ const styles = StyleSheet.create({
     marginLeft: 20
   },
   appleText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
     marginRight: 30
   },
   appleTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
@@ -631,7 +451,7 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 30,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     textAlign: "center",
     marginBottom: 20
   },
@@ -645,7 +465,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   resetText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
   },
   resetPasswordButton: {
@@ -654,7 +474,7 @@ const styles = StyleSheet.create({
   },
   resetPasswordText: {
     color: 'black',
-    fontWeight: 'thin',
+    fontWeight: '100',
     textAlign: 'center',
     textDecorationLine: 'underline'
   },
@@ -667,7 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   passwordsDontMatchText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     textAlign: "center",
     padding: 5,
@@ -682,7 +502,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   submitText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   emailMessageSuccess: {
@@ -704,7 +524,7 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
   emailText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     textAlign: "center",
     padding: 5
@@ -715,7 +535,6 @@ const styles = StyleSheet.create({
   },
   loginBackText: {
     color: 'black',
-    fontWeight: 'thin',
     textAlign: 'center',
     textDecorationLine: 'underline'
   },

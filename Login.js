@@ -1,25 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TextInput } from 'react-native-gesture-handler';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationContainer } from "@react-navigation/native";
-import { auth, googleProvider } from './firebase';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth } from './firebase';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import CreateAccount from './CreateAccount';
 import ForgotPassword from './ForgotPassword';
 
 const LoginScreen = ({ route }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [ user, setUser ] = useState(null);
   const { navigate } = useNavigation()
   const [displayError, setDisplayError] = useState("")
-  const { infoEntered, setInfoEntered} = route.params
+  const { setInfoEntered, promptAsyncGoogle, setLoading, setUser } = route.params
   const slideAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -49,64 +47,50 @@ const LoginScreen = ({ route }) => {
 
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      setInfoEntered(true)
-      setUser(auth.currentUser)
+      await signInWithEmailAndPassword(auth, email, password)
+      .then(() => {setInfoEntered(true); setUser(auth.currentUser)})
     } catch (error) {
-      setDisplayError(error.message);
+      setDisplayError("Fel vid inloggning: " + error.message);
     }
   };
-  
-  const handleGoogleLogin = () => {
-    signInWithPopup(auth, googleProvider)
-  .then((result) => {
-    setUser(result.user);
-  }).catch((error) => {
-    setDisplayError(error)
-  });
-  };
 
-    return (
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true); 
+      promptAsyncGoogle()
+    } catch (error) {
+      console.log(error)
+    }
+  };
+  return (
     <SafeAreaView style={styles.container} behavior="padding">
       <View style={styles.inputContainer}>
-        <Text style={styles.header}>Login</Text>
+        <Text style={styles.header}>Logga in</Text>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="account-outline" style={styles.icons} />
           <View style={styles.devider} />
-          <TextInput placeholder='Email' onChangeText={(text) => setEmail(text)} style={styles.input}/>
+          <TextInput placeholder='E-post' onChangeText={(text) => setEmail(text)} style={styles.input}/>
         </View>
         <View style={styles.textInputContainer}>
           <MaterialCommunityIcons name="lock-outline" style={styles.icons} />
           <View style={styles.devider} />
-          <TextInput placeholder='Password' onChangeText={(text) => setPassword(text)} secureTextEntry={true} style={styles.input}/>
+          <TextInput placeholder='Lösenord' onChangeText={(text) => setPassword(text)} secureTextEntry={true} style={styles.input}/>
         </View>
         <TouchableOpacity style={styles.loginButton} onPress={() => handleLogin()}>
-          <Text style={styles.loginText}>Login</Text>
+          <Text style={styles.loginText}>Logga in</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.createAccount} onPress={() => {navigate("CreateAccount")}}>
-          <Text style={styles.createAccountText}>Create account</Text>
+          <Text style={styles.createAccountText}>Skapa konto</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.resetPasswordButton} onPress={() => {navigate("ForgotPassword")}}>
-          <Text style={styles.resetPasswordText}>Forgot Password?</Text>
+          <Text style={styles.resetPasswordText}>Glömt lösenord?</Text>
         </TouchableOpacity>
         <View style={styles.horizontalDevider} />
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
+        <TouchableOpacity style={styles.googleButton} onPress={() => { handleGoogleLogin()}}>
           <View style={styles.buttonIcon}>
             <AntDesign name="google" style={styles.googleIcon} />
           </View>
-          <Text style={styles.googleText}>Sign in with Google</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.facebookButton}>
-          <View style={styles.buttonIcon}>
-            <MaterialCommunityIcons name="facebook" style={styles.facebookIcon} />
-          </View>
-          <Text style={styles.facebookText}>Sign in with Facebook</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.appleButton}>
-          <View style={styles.buttonIcon}>
-            <FontAwesome5 name="apple" style={styles.appleIcon} />
-          </View>
-          <Text style={styles.appleText}>Sign in with Apple</Text>
+          <Text style={styles.googleText}>Logga in med Google</Text>
         </TouchableOpacity>
       </View>
       {displayError !== "" && (
@@ -120,12 +104,13 @@ const LoginScreen = ({ route }) => {
 
 const Homestack = createNativeStackNavigator()
 
-export default function LoginStack({ infoEntered, setInfoEntered}) {
+export default function LoginStack({ infoEntered, setInfoEntered, promptAsyncGoogle, setLoading, setUser }) {
+
   return (
     <NavigationContainer>
       <Homestack.Navigator>
-        <Homestack.Screen name="LoginScreen"  initialParams={{infoEntered, setInfoEntered: (info) => setInfoEntered(info)}} component={LoginScreen} options={{ headerShown: false }}/>
-        <Homestack.Screen name="CreateAccount" initialParams={{infoEntered, setInfoEntered: (info) => setInfoEntered(info)}} component={CreateAccount} options={{ headerShown: false }}/>
+        <Homestack.Screen name="LoginScreen" initialParams={{infoEntered, setInfoEntered: (info) => setInfoEntered(info), promptAsyncGoogle: (info) => promptAsyncGoogle(info), setLoading: (info) => setLoading(info), setUser: (info) => setUser(info)}} component={LoginScreen} options={{ headerShown: false }}/>
+        <Homestack.Screen name="CreateAccount" initialParams={{infoEntered, setInfoEntered: (info) => setInfoEntered(info), promptAsyncGoogle: (info) => promptAsyncGoogle(info), setLoading: (info) => setLoading(info)}} component={CreateAccount} options={{ headerShown: false }}/>
         <Homestack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }}/>
       </Homestack.Navigator>
     </NavigationContainer>
@@ -177,7 +162,7 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   loginText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   createAccount: {
@@ -190,7 +175,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   createAccountText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   createAccount2: {
     backgroundColor: "#00FF00",
@@ -202,7 +187,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   createAccountText2: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   horizontalDevider: {
@@ -231,13 +216,13 @@ const styles = StyleSheet.create({
     color: "black"
   },
   googleText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     flex: 1,
     textAlign: "center",
     marginRight: 50
   },
   googleTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     flex: 1,
     textAlign: "center",
     marginRight: 30
@@ -258,14 +243,14 @@ const styles = StyleSheet.create({
     color: "white",
   },
   facebookText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
     marginRight: 50
   },
   facebookTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
@@ -288,14 +273,14 @@ const styles = StyleSheet.create({
     marginLeft: 20
   },
   appleText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
     marginRight: 30
   },
   appleTextCreate: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     flex: 1,
     textAlign: "center",
@@ -303,7 +288,7 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 30,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     textAlign: "center",
     marginBottom: 20
   },
@@ -317,7 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   resetText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
   },
   resetPasswordButton: {
@@ -326,7 +311,6 @@ const styles = StyleSheet.create({
   },
   resetPasswordText: {
     color: 'black',
-    fontWeight: 'thin',
     textAlign: 'center',
     textDecorationLine: 'underline'
   },
@@ -348,7 +332,7 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   submitText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white"
   },
   emailMessageSuccess: {
@@ -370,7 +354,7 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
   emailText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     textAlign: "center",
     padding: 5
@@ -384,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   passwordsDontMatchText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: "white",
     textAlign: "center",
     padding: 5,

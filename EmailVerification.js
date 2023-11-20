@@ -1,31 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Modal, Pressable, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { auth } from './firebase';
 import { sendEmailVerification, onAuthStateChanged } from 'firebase/auth';
 
-export default function EmailVerification({ verified, setVerified }) {
+export default function EmailVerification({ verified, setVerified, setInfoEntered, setUser, user }) {
     const [displayError, setDisplayError] = useState('');
-    const [ user, setUser ] = useState(null);
 
     useEffect(() => {
         emailSend()
     }, [])
 
     useEffect(() => {
-        const unSubscribe = onAuthStateChanged(auth, (user) => {setUser(user)})
+        BackHandler.addEventListener('hardwareBackPress', handleBackButtonClick);
+        return () => {
+            BackHandler.removeEventListener('hardwareBackPress', handleBackButtonClick);
+        };
+    }, []);
+
+    useEffect(() => {
+        const unSubscribe = onAuthStateChanged(auth, (user) => { setUser(user); console.log(user.emailVerified) })
         return () => unSubscribe();
-    }, [])  
+    }, [])
+
+    const handleBackButtonClick = () => {
+        setUser(null)
+        setInfoEntered(false)
+    };
 
     const checkEmailVerification = async () => {
+        user.emailVerified
         if (user) {
             setUser(user);
             await user.reload();
             if (user.emailVerified) {
                 setVerified(true)
             } else {
-                setDisplayError('You have not verified your email')
+                setDisplayError('Du har inte verifierat din e-postadress')
             }
         }
     };
@@ -42,10 +54,13 @@ export default function EmailVerification({ verified, setVerified }) {
         <SafeAreaView style={styles.container} behavior="padding">
             <View style={styles.content}>
                 <MaterialCommunityIcons name="email-outline" size={60} style={styles.icon} />
-                <Text style={styles.title}>Verify your email</Text>
-                <Text style={styles.description}>A verification email has been sent to your email. If you cannot find it, check your spam folder.</Text>
+                <Text style={styles.title}>Verifiera din e-post</Text>
+                <Text style={styles.description}>Ett verifierings-e-postmeddelande har skickats till din e-postadress. Om du inte hittar det, kolla i din skräppostmapp.</Text>
                 <TouchableOpacity style={styles.checkVerification} onPress={() => checkEmailVerification()}>
-                    <Text style={styles.checkVerificationText}>Check verification</Text>
+                    <Text style={styles.checkVerificationText}>Kontrollera verifiering</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.loginBackButton} onPress={() => handleBackButtonClick()}>
+                    <Text style={styles.loginBackText}>Gå tillbaka till inloggning</Text>
                 </TouchableOpacity>
             </View>
             {displayError !== "" && (
@@ -91,7 +106,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     checkVerificationText: {
-        fontWeight: "bold",
+        fontWeight: 'bold',
         color: "white",
     },
     error: {
@@ -103,9 +118,19 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     errorText: {
-        fontWeight: "bold",
+        fontWeight: 'bold',
         color: "white",
         textAlign: "center",
         padding: 5,
     },
+    loginBackButton: {
+        marginTop: 10,
+        width: 300
+      },
+      loginBackText: {
+        color: 'black',
+        textAlign: 'center',
+        fontWeight: 'thin',
+        textDecorationLine: 'underline'
+      },
 });

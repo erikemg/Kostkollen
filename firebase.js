@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getAuth, getReactNativePersistence, GoogleAuthProvider } from 'firebase/auth';
 import { getDatabase, ref } from 'firebase/database';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FacebookAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAW6jci0BBnqvgemi3-wLseP4bV83CJPYs",
@@ -28,9 +29,10 @@ const firebaseConfig = {
     auth = getAuth(app);
     }
   const db = getDatabase(app);
-  const foodsInDb = ref(db, 'foods');
   const usersRef = ref(db, 'users');
+  const foodsInDb = ref(db, 'foods');
 
   const googleProvider = new GoogleAuthProvider()
+  const facebookProvider = new FacebookAuthProvider()
   
-  export { auth, googleProvider, foodsInDb, usersRef };
+  export { auth, googleProvider, usersRef, facebookProvider, db, foodsInDb};
